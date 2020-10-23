@@ -10,12 +10,22 @@ import (
 
 func main() {
 	e := echo.New()
-	e.Debug = true
-	e.Validator = validation.NewCustomValidator()
+	enableDebugMode(e)
+	enableValidation(e)
+	enableLoginAPI(e)
+	e.Logger.Fatal(e.Start(":8080"))
+}
 
+func enableDebugMode(e *echo.Echo) {
+	e.Debug = true
+}
+
+func enableValidation(e *echo.Echo) {
+	e.Validator = validation.NewCustomValidator()
+}
+
+func enableLoginAPI(e *echo.Echo) {
 	loginService := service.NewLoginService()
 	loginAPI := api.NewLoginAPI(loginService)
 	e.POST("/login", loginAPI.Login)
-
-	e.Logger.Fatal(e.Start(":8080"))
 }
