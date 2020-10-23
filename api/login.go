@@ -20,6 +20,7 @@ func NewLoginAPI(service service.LoginService) *LoginAPI {
 	}
 }
 
+// Login is http handler
 func (a LoginAPI) Login(c echo.Context) error {
 	var loginRequest model.LoginRequest
 	if err := c.Bind(&loginRequest); err != nil {
@@ -32,6 +33,12 @@ func (a LoginAPI) Login(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.LoginResponse{
 			Status:       "fail",
 			ErrorMessage: "validate error",
+		})
+	}
+	if err := a.Service.Login(); err != nil {
+		return c.JSON(http.StatusUnauthorized, model.LoginResponse{
+			Status:       "fail",
+			ErrorMessage: "invalid user",
 		})
 	}
 	return c.JSON(http.StatusOK, model.LoginResponse{
