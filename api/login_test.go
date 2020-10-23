@@ -3,6 +3,7 @@ package api_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"go-echo-api/model"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,53 @@ import (
 	. "go-echo-api/api"
 	"go-echo-api/validation"
 )
+
+func TestLoginAPIInvalidUserBodyShouldReturnStatusUnauthorized(t *testing.T) {
+	expectedStatusCode := http.StatusUnauthorized
+	expectedBody := `{"status":"fail","error_message":"invalid user"}`
+	loginRequest := model.LoginRequest{
+		Email:    "fake@example.com",
+		Password: "123456789",
+	}
+	requestBody, _ := json.Marshal(loginRequest)
+	request := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(requestBody))
+	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	recoder := httptest.NewRecorder()
+	e := echo.New()
+	e.Validator = validation.NewCustomValidator()
+	context := e.NewContext(request, recoder)
+	mockLoginService := &MockLoginService{}
+	mockLoginService.
+		On("Login").
+		Return(errors.New("user not found"))
+	api := NewLoginAPI(mockLoginService)
+
+	actualErr := api.Login(context)
+
+	if assert.NoError(t, actualErr) {
+		assert.Equal(t, expectedStatusCode, recoder.Code)
+		assert.Equal(t, expectedBody, strings.TrimSpace(recoder.Body.String()))
+	}
+}
+
+func TestLoginAPIRequestBodyStringShouldReturnStatusBadRequest(t *testing.T) {
+	expectedStatusCode := http.StatusBadRequest
+	expectedBody := `{"status":"fail","error_message":"binding error"}`
+	e := echo.New()
+	e.Validator = validation.NewCustomValidator()
+	request := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("fake@email.com,123456"))
+	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	recoder := httptest.NewRecorder()
+	context := e.NewContext(request, recoder)
+	api := NewLoginAPI(&MockLoginService{})
+
+	actualErr := api.Login(context)
+
+	if assert.NoError(t, actualErr) {
+		assert.Equal(t, expectedStatusCode, recoder.Code)
+		assert.Equal(t, expectedBody, strings.TrimSpace(recoder.Body.String()))
+	}
+}
 
 func TestLoginAPIEmptyRequestBodyShouldReturnStatusBadRequest(t *testing.T) {
 	expectedStatusCode := http.StatusBadRequest
@@ -38,13 +86,13 @@ func TestLoginAPIEmptyRequestBodyShouldReturnStatusBadRequest(t *testing.T) {
 func TestLoginAPIShouldReturnStatusBadRequest(t *testing.T) {
 	expectedStatusCode := http.StatusBadRequest
 	expectedBody := `{"status":"fail","error_message":"validate error"}`
-	e := echo.New()
-	e.Validator = validation.NewCustomValidator()
 	loginRequest := model.LoginRequest{}
 	requestBody, _ := json.Marshal(loginRequest)
 	request := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(requestBody))
 	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	recoder := httptest.NewRecorder()
+	e := echo.New()
+	e.Validator = validation.NewCustomValidator()
 	context := e.NewContext(request, recoder)
 	api := NewLoginAPI(&MockLoginService{})
 
@@ -59,8 +107,6 @@ func TestLoginAPIShouldReturnStatusBadRequest(t *testing.T) {
 func TestLoginAPIShouldReturnStatusOK(t *testing.T) {
 	expectedStatusCode := http.StatusOK
 	expectedBody := `{"status":"success"}`
-	e := echo.New()
-	e.Validator = validation.NewCustomValidator()
 	loginRequest := model.LoginRequest{
 		Email:    "fake@example.com",
 		Password: "123456789",
@@ -69,8 +115,14 @@ func TestLoginAPIShouldReturnStatusOK(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(requestBody))
 	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	recoder := httptest.NewRecorder()
+	e := echo.New()
+	e.Validator = validation.NewCustomValidator()
 	context := e.NewContext(request, recoder)
-	api := NewLoginAPI(&MockLoginService{})
+	mockLoginService := &MockLoginService{}
+	mockLoginService.
+		On("Login").
+		Return(nil)
+	api := NewLoginAPI(mockLoginService)
 
 	actualErr := api.Login(context)
 
