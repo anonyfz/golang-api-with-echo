@@ -1,7 +1,12 @@
 package api_test
 
-type MockLoginAPI struct{}
+import "github.com/stretchr/testify/mock"
 
-func (MockLoginAPI) Login() error {
-	return nil
+type MockLoginService struct {
+	mock.Mock
+}
+
+func (m *MockLoginService) Login() error {
+	args := m.Called()
+	return args.Error(0)
 }
