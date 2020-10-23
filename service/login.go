@@ -1,6 +1,7 @@
 package service
 
 type (
+	// LoginService is interface service
 	LoginService interface {
 		Login() error
 	}
@@ -8,6 +9,7 @@ type (
 	loginService struct{}
 )
 
+// NewLoginService is wrap struct loginService
 func NewLoginService() LoginService {
 	return &loginService{}
 }
