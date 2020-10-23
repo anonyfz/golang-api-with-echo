@@ -9,6 +9,7 @@ type (
 
 	// LoginResponse is model for login response body
 	LoginResponse struct {
-		Status string `json:"status"`
+		Status       string `json:"status"`
+		ErrorMessage string `json:"error_message,omitempty"`
 	}
 )
