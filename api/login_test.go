@@ -45,6 +45,25 @@ func TestLoginAPIInvalidUserBodyShouldReturnStatusUnauthorized(t *testing.T) {
 	}
 }
 
+func TestLoginAPIRequestBodyStringShouldReturnStatusBadRequest(t *testing.T) {
+	expectedStatusCode := http.StatusBadRequest
+	expectedBody := `{"status":"fail","error_message":"binding error"}`
+	e := echo.New()
+	e.Validator = validation.NewCustomValidator()
+	request := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("fake@email.com,123456"))
+	request.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	recoder := httptest.NewRecorder()
+	context := e.NewContext(request, recoder)
+	api := NewLoginAPI(&MockLoginService{})
+
+	actualErr := api.Login(context)
+
+	if assert.NoError(t, actualErr) {
+		assert.Equal(t, expectedStatusCode, recoder.Code)
+		assert.Equal(t, expectedBody, strings.TrimSpace(recoder.Body.String()))
+	}
+}
+
 func TestLoginAPIEmptyRequestBodyShouldReturnStatusBadRequest(t *testing.T) {
 	expectedStatusCode := http.StatusBadRequest
 	expectedBody := `{"status":"fail","error_message":"validate error"}`
@@ -99,7 +118,11 @@ func TestLoginAPIShouldReturnStatusOK(t *testing.T) {
 	e := echo.New()
 	e.Validator = validation.NewCustomValidator()
 	context := e.NewContext(request, recoder)
-	api := NewLoginAPI(&MockLoginService{})
+	mockLoginService := &MockLoginService{}
+	mockLoginService.
+		On("Login").
+		Return(nil)
+	api := NewLoginAPI(mockLoginService)
 
 	actualErr := api.Login(context)
 
